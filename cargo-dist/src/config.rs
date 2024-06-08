@@ -11,11 +11,11 @@ use serde::{Deserialize, Serialize};
 use tracing::log::warn;
 
 use crate::announce::TagSettings;
-use crate::ProjectError;
 use crate::{
     errors::{DistError, DistResult},
     TargetTriple, METADATA_DIST,
 };
+use crate::{CacheProvider, ProjectError};
 
 /// A container to assist deserializing metadata from generic, non-Cargo projects
 #[derive(Debug, Deserialize)]
@@ -410,6 +410,12 @@ pub struct DistMetadata {
     /// the workspace that cannot be built. In that case you can set this
     /// to true to force a build for each binary.
     pub force_per_package: Option<bool>,
+
+    /// Cache provider
+    ///
+    /// By default, cargo-dist will cache builds using the default GitHub Actions cache.
+    /// This can be overridden to use a different provider, such as buildjet.
+    pub cache_provider: Option<CacheProvider>,
 }
 
 impl DistMetadata {
@@ -470,6 +476,7 @@ impl DistMetadata {
             display: _,
             display_name: _,
             force_per_package: _,
+            cache_provider: _,
         } = self;
         if let Some(include) = include {
             for include in include {
@@ -550,6 +557,7 @@ impl DistMetadata {
             display,
             display_name,
             force_per_package,
+            cache_provider,
         } = self;
 
         // Check for global settings on local packages
@@ -642,6 +650,10 @@ impl DistMetadata {
 
         if force_per_package.is_some() {
             warn!("package.metadata.dist.force-per-package is set, but this is only accepted in workspace.metadata (value is being ignored): {}", package_manifest_path);
+        }
+        
+        if cache_provider.is_some() {
+            warn!("package.metadata.dist.cache-provider is set, but this is only accepted in workspace.metadata (value is being ignored): {}", package_manifest_path);
         }
 
         // Merge non-global settings
